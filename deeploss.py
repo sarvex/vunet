@@ -17,9 +17,7 @@ def preprocess_input(x):
     x = (x + 1.0) / 2.0 * 255.0
     # 'RGB'->'BGR'
     x = x[:, :, :, ::-1]
-    # Zero-center by mean pixel
-    x = x - np.array([103.939, 116.779, 123.68]).reshape((1,1,1,3))
-    return x
+    return x - np.array([103.939, 116.779, 123.68]).reshape((1,1,1,3))
 
 
 class VGG19Features(object):
@@ -37,10 +35,8 @@ class VGG19Features(object):
                     "block5_conv2"]
         self.layer_names = [l.name for l in self.base_model.layers]
         for k in feature_layers:
-            if not k in self.layer_names:
-                raise KeyError(
-                        "Invalid layer {}. Available layers: {}".format(
-                            k, self.layer_names))
+            if k not in self.layer_names:
+                raise KeyError(f"Invalid layer {k}. Available layers: {self.layer_names}")
         features = [self.base_model.get_layer(k).output for k in feature_layers]
         self.model = Model(
                 inputs = self.base_model.input,
@@ -60,19 +56,17 @@ class VGG19Features(object):
     def extract_features(self, x):
         """x should be rgb in [-1,1]."""
         x = preprocess_input(x)
-        features = self.model.predict(x)
-        return features
+        return self.model.predict(x)
 
 
     def make_feature_ops(self, x):
         """x should be rgb tensor in [-1,1]."""
         x = preprocess_input(x)
-        features = self.model(x)
-        return features
+        return self.model(x)
 
 
     def grams(self, fs):
-        gs = list()
+        gs = []
         for f in fs:
             bs, h, w, c = f.shape.as_list()
             f = tf.reshape(f, [bs, h*w, c])

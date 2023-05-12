@@ -38,9 +38,8 @@ def load_img(path, target_size):
     if grayscale:
         if img.mode != 'L':
             img = img.convert('L')
-    else:
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
     wh_tuple = (target_size[1], target_size[0])
     if img.size != wh_tuple:
         img = img.resize(wh_tuple, resample = PIL.Image.BILINEAR)
@@ -97,10 +96,7 @@ def make_joint_img(img_shape, jo, joints):
     # three channels: left, right, center
     scale_factor = img_shape[1] / 128
     thickness = int(3 * scale_factor)
-    imgs = list()
-    for i in range(3):
-        imgs.append(np.zeros(img_shape[:2], dtype = "uint8"))
-
+    imgs = [np.zeros(img_shape[:2], dtype = "uint8") for _ in range(3)]
     body = ["lhip", "lshoulder", "rshoulder", "rhip"]
     body_pts = np.array([[joints[jo.index(part),:] for part in body]])
     if np.min(body_pts) >= 0:
@@ -236,13 +232,12 @@ def get_crop(bpart, joints, jo, wh, o_w, o_h, ar = 1.0):
     dst = np.float32([[0.0,0.0],[0.0,1.0],[1.0,1.0],[1.0,0.0]])
     part_dst = np.float32(wh * dst)
 
-    M = cv2.getPerspectiveTransform(part_src, part_dst)
-    return M
+    return cv2.getPerspectiveTransform(part_src, part_dst)
 
 
 def normalize(imgs, coords, stickmen, jo, box_factor):
-    out_imgs = list()
-    out_stickmen = list()
+    out_imgs = []
+    out_stickmen = []
 
     bs = len(imgs)
     for i in range(bs):
@@ -269,8 +264,8 @@ def normalize(imgs, coords, stickmen, jo, box_factor):
                 ["rhip", "rknee"]]
         ar = 0.5
 
-        part_imgs = list()
-        part_stickmen = list()
+        part_imgs = []
+        part_stickmen = []
         for bpart in bparts:
             part_img = np.zeros((h,w,3))
             part_stickman = np.zeros((h,w,3))
@@ -336,13 +331,10 @@ class IndexFlow(object):
         required_joints = ["lshoulder","rshoulder","lhip","rhip"]
         joint_indices = [self.jo.index(b) for b in required_joints]
         joints = np.float32(joints[joint_indices])
-        good = good and valid_joints(joints)
-        return good
+        return good and valid_joints(joints)
 
 
     def __next__(self):
-        batch = dict()
-
         # get indices for batch
         batch_start, batch_end = self.batch_start, self.batch_start + self.batch_size
         batch_indices = self.indices[batch_start:batch_end]
@@ -351,8 +343,7 @@ class IndexFlow(object):
             batch_indices = np.concatenate([batch_indices, self.indices[:n_missing]], axis = 0)
             assert batch_indices.shape[0] == self.batch_size
         batch_indices = np.array(batch_indices)
-        batch["indices"] = batch_indices
-
+        batch = {"indices": batch_indices}
         # prepare next batch
         if batch_end >= self.n:
             self.shuffle()
@@ -361,7 +352,7 @@ class IndexFlow(object):
 
         # prepare batch data
         # load images
-        batch["imgs"] = list()
+        batch["imgs"] = []
         for i in batch_indices:
             relpath = self.index["imgs"][i]
             path = os.path.join(self.basepath, relpath)
@@ -373,7 +364,7 @@ class IndexFlow(object):
         batch["joints_coordinates"] = [self.index["joints"][i] for i in batch_indices]
 
         # generate stickmen images from coordinates
-        batch["joints"] = list()
+        batch["joints"] = []
         for joints in batch["joints_coordinates"]:
             img = make_joint_img(self.img_shape, self.jo, joints)
             batch["joints"].append(img)
@@ -384,8 +375,7 @@ class IndexFlow(object):
         batch["norm_imgs"] = imgs
         batch["norm_joints"] = joints
 
-        batch_list = [batch[k] for k in self.return_keys]
-        return batch_list
+        return [batch[k] for k in self.return_keys]
 
 
     def shuffle(self):
@@ -409,8 +399,8 @@ def get_batches(
 
 if __name__ == "__main__":
     import sys
-    if not len(sys.argv) == 2:
-        print("Useage: {} <path to index.p>".format(sys.argv[0]))
+    if len(sys.argv) != 2:
+        print(f"Useage: {sys.argv[0]} <path to index.p>")
         exit(1)
 
     batches = get_batches(

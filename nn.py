@@ -14,9 +14,9 @@ def int_shape(x):
 
 def get_name(layer_name, counters):
     ''' utlity for keeping track of layer names '''
-    if not layer_name in counters:
+    if layer_name not in counters:
         counters[layer_name] = 0
-    name = layer_name + '_' + str(counters[layer_name])
+    name = f'{layer_name}_{str(counters[layer_name])}'
     counters[layer_name] += 1
     return name
 
@@ -100,7 +100,7 @@ def deconv2d(x, num_filters, filter_size=[3, 3], stride=[1, 1], pad='SAME', init
 
 @add_arg_scope
 def activate(x, activation, **kwargs):
-    if activation == None:
+    if activation is None:
         return x
     elif activation == "elu":
         return tf.nn.elu(x)
